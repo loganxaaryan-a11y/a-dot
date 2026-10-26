@@ -20,7 +20,7 @@ function boot(width=800,height=600){
   context.window=context;
   vm.createContext(context);
   // Expose lexical game functions only in this test VM, never in the published page.
-  const expose=`window.audit={reset,update,render,updateHint,updateSkipOffer,noteProgress,recordSkip,showHint,computeHintProfile,buildHintRead,buildDimensionProfile,dimensionTitle,reportText,sessionJSON,setupNBack,setupTracking,mirrorDown,
+  const expose=`window.audit={reset,update,render,updateHint,updateSkipOffer,noteProgress,recordSkip,showHint,computeHintProfile,buildHintRead,buildDimensionProfile,dimensionTitle,buildStrategyProfile,buildCrossGameRead,buildDirectorCuts,buildPlayProfile,reportText,sessionJSON,setupNBack,setupTracking,mirrorDown,
     enterMaze(){reset();phase='maze';mazeMetrics.start=0;updateHint();updateSkipOffer()},
     tick(t){activeTime=t;updateHint();updateSkipOffer()},
     time(t){activeTime=t},pointer(down){pointer.down=down},
@@ -126,4 +126,21 @@ test('all gameplay preview entry points render without exceptions',()=>{
   for(const name of ['__PLAYTEST_RAVENS__','__PLAYTEST_NBACK__','__PLAYTEST_TRACKING__','__PLAYTEST_ORBIT__','__PLAYTEST_MIRROR__']){
     w[name]();g.render();g.update(.016);g.render();
   }
+});
+test('unplayed games cannot generate successful strategy claims or rates',()=>{
+  g.reset();const p=g.buildPlayProfile();
+  assert.ok(p.strategies.every(s=>s.token==='unobserved'));
+  assert.ok(Object.values(p.values).every(x=>x===null));
+  assert.match(g.buildCrossGameRead(p.strategies),/not enough recorded play/);
+});
+test('partial maze and field skips do not claim successful completion',()=>{
+  g.reset();const s=g.state();s.mazeMetrics.skips=1;s.mazeMetrics.breaks.push({});
+  s.clusterMetrics.skips=1;s.clusterMetrics.closedLoops.push({});
+  const p=g.buildStrategyProfile();assert.equal(p[0].token,'skip');assert.equal(p[1].token,'skip');
+  assert.match(p[1].read,/1 loops/);assert.doesNotMatch(p[0].read,/reached the exit/);
+});
+test('synthetic report cannot claim games were played',()=>{
+  w.__PLAYTEST_REPORT__();const text=g.reportText();
+  assert.doesNotMatch(text,/reached the exit|reached the door without|0 of 0 launches|100% economy/);
+  assert.match(text,/No results were recorded for the first seven games/);
 });
