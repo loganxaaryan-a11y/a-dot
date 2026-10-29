@@ -144,3 +144,10 @@ test('synthetic report cannot claim games were played',()=>{
   assert.doesNotMatch(text,/reached the exit|reached the door without|0 of 0 launches|100% economy/);
   assert.match(text,/No results were recorded for the first seven games/);
 });
+
+test('public page metadata accurately describes the game without implying psychometric validity',()=>{
+  assert.match(html,/<meta name="description" content="[^"]*Eight interactive games[^"]*" \/>/);
+  assert.match(html,/<link rel="canonical" href="https:\/\/loganxaaryan-a11y\.github\.io\/a-dot\/" \/>/);
+  assert.match(html,/<meta property="og:description" content="[^"]*Not a diagnosis, score or personality test\." \/>/);
+  assert.match(html,/<meta name="twitter:card" content="summary" \/>/);
+});
